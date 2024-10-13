@@ -26,7 +26,7 @@ forward_command_controller:
       - leg_back_l_1
       - leg_back_l_2
       - leg_back_l_3
-    interface_name: effort
+    interface_name: position
 
 joint_state_broadcaster:
   ros__parameters:

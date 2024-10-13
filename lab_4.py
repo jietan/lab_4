@@ -5,9 +5,6 @@ from std_msgs.msg import Float64MultiArray
 import numpy as np
 np.set_printoptions(precision=3, suppress=True)
 
-Kp = 15
-Kd = 0.1
-
 def rotation_x(angle):
     return np.array([
         [1, 0, 0, 0],
@@ -62,62 +59,64 @@ class InverseKinematics(Node):
         self.target_joint_positions = None
         self.counter = 0
 
-        touch_down_position = np.array([0.05, 0.0, -0.12])
-        stand_position = np.array([-0.02, 0.0, -0.12])
-        liftoff_position = np.array([-0.05, 0.0, -0.12])
-        mid_swing_position = np.array([-0.02, 0.0, -0.05])
+        touch_down_position = np.array([0.05, 0.0, -0.14])
+        stand_position_1 = np.array([0.025, 0.0, -0.14])
+        stand_position_2 = np.array([0.0, 0.0, -0.14])
+        stand_position_3 = np.array([-0.025, 0.0, -0.14])
+        liftoff_position = np.array([-0.05, 0.0, -0.14])
+        mid_swing_position = np.array([0.0, 0.0, -0.05])
 
         ## trotting 
-        # rf_ee_triangle_positions = np.array([
-        #     touch_down_position,
-        #     touch_down_position,
-        #     stand_position,
-        #     liftoff_position,
-        #     liftoff_position,
-        #     mid_swing_position,
-        # ]) + np.array([0.07500, -0.08350, 0])
-        # lf_ee_triangle_positions = np.array([
-        #     liftoff_position,
-        #     liftoff_position,
-        #     mid_swing_position,
-        #     touch_down_position,
-        #     touch_down_position,
-        #     stand_position,
-        # ]) + np.array([0.07500, 0.08350, 0])
-        # rb_ee_triangle_positions = np.array([
-        #     liftoff_position,
-        #     liftoff_position,
-        #     mid_swing_position,
-        #     touch_down_position,
-        #     touch_down_position,
-        #     stand_position,
-        # ]) + np.array([-0.07500, -0.07250, 0])
-        # lb_ee_triangle_positions = np.array([
-        #     touch_down_position,
-        #     touch_down_position,
-        #     stand_position,
-        #     liftoff_position,
-        #     liftoff_position,
-        #     mid_swing_position,
-        # ]) + np.array([-0.07500, 0.07250, 0])
+        rf_ee_triangle_positions = np.array([
+            touch_down_position,
+            stand_position_1,
+            stand_position_2,
+            stand_position_3,
+            liftoff_position,
+            mid_swing_position,
+        ]) + np.array([0.06, -0.09, 0])
+        lf_ee_triangle_positions = np.array([
+            stand_position_3,
+            liftoff_position,
+            mid_swing_position,
+            touch_down_position,
+            stand_position_1,
+            stand_position_2,
+        ]) + np.array([0.06, 0.09, 0])
+        rb_ee_triangle_positions = np.array([
+            stand_position_3,
+            liftoff_position,
+            mid_swing_position,
+            touch_down_position,
+            stand_position_1,
+            stand_position_2,
+        ]) + np.array([-0.11, -0.09, 0])
+        lb_ee_triangle_positions = np.array([
+            touch_down_position,
+            stand_position_1,
+            stand_position_2,
+            stand_position_3,
+            liftoff_position,
+            mid_swing_position,
+        ]) + np.array([-0.11, 0.09, 0])
 
         ## tapping
-        rf_ee_triangle_positions = np.array([
-            stand_position,
-            mid_swing_position,
-        ]) + np.array([0.07500, -0.1, 0])
-        lf_ee_triangle_positions = np.array([
-            mid_swing_position,
-            stand_position,
-        ]) + np.array([0.07500, 0.1, 0])
-        rb_ee_triangle_positions = np.array([
-            mid_swing_position,
-            stand_position,
-        ]) + np.array([-0.07500, -0.1, 0])
-        lb_ee_triangle_positions = np.array([
-            stand_position,
-            mid_swing_position,
-        ]) + np.array([-0.07500, 0.1, 0])
+        # rf_ee_triangle_positions = np.array([
+        #     stand_position,
+        #     mid_swing_position,
+        # ]) + np.array([0.07500, -0.1, 0])
+        # lf_ee_triangle_positions = np.array([
+        #     mid_swing_position,
+        #     stand_position,
+        # ]) + np.array([0.07500, 0.1, 0])
+        # rb_ee_triangle_positions = np.array([
+        #     mid_swing_position,
+        #     stand_position,
+        # ]) + np.array([-0.07500, -0.1, 0])
+        # lb_ee_triangle_positions = np.array([
+        #     stand_position,
+        #     mid_swing_position,
+        # ]) + np.array([-0.07500, 0.1, 0])
 
         self.ee_triangle_positions = [rf_ee_triangle_positions, lf_ee_triangle_positions, rb_ee_triangle_positions, lb_ee_triangle_positions]
         self.fk_functions = [self.fr_leg_fk, self.fl_leg_fk, self.br_leg_fk, self.lb_leg_fk]
@@ -127,7 +126,7 @@ class InverseKinematics(Node):
         print(f'shape of target_ee_cache: {self.target_ee_cache.shape}')
 
 
-        self.pd_timer_period = 1.0 / 500  # 200 Hz
+        self.pd_timer_period = 1.0 / 200  # 200 Hz
         self.ik_timer_period = 1.0 / 100   # 10 Hz
         self.pd_timer = self.create_timer(self.pd_timer_period, self.pd_timer_callback)
         self.ik_timer = self.create_timer(self.ik_timer_period, self.ik_timer_callback)
@@ -271,12 +270,11 @@ class InverseKinematics(Node):
                 Current Angles: {self.joint_positions}')
 
     def pd_timer_callback(self):
-        if self.joint_positions is not None and self.joint_velocities is not None and self.target_joint_positions is not None:
-            torques = Kp * (self.target_joint_positions - self.joint_positions) - Kd * self.joint_velocities
-
+        if self.target_joint_positions is not None:
             command_msg = Float64MultiArray()
-            command_msg.data = torques.tolist()
+            command_msg.data = self.target_joint_positions.tolist()
             self.command_publisher.publish(command_msg)
+
 
 def main():
     rclpy.init()
